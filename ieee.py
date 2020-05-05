@@ -7,8 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 url = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText='
-test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer'
-
+# test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer'
+test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer&highlight=true&returnType=SEARCH&matchPubs=true&pageNumber=130&returnFacets=ALL'
 #浏览器设置
 def brower_init():
     print("正在初始化浏览器")
@@ -57,12 +57,13 @@ def fliter(ccf_list, datalist):
     res_list = []
     for i in range(len(datalist)):
         flag = False
-        for y in ccf_list:
-            if datalist[i]["publication_title"].find(y[0]) != -1 or datalist[i]["publication_title"].find(y[0]) != -1:
-                print(i,"success")
-                res_list.append(datalist[i])
-                flag = True
-                break
+        if 'publication_title' in datalist[i]:
+            for y in ccf_list:
+                if datalist[i]["publication_title"].find(y[0]) != -1 or datalist[i]["publication_title"].find(y[0]) != -1:
+                    print(i,"success")
+                    res_list.append(datalist[i])
+                    flag = True
+                    break
         if not flag:
             print(i,"fail")
     return res_list
@@ -132,8 +133,10 @@ waitPage(60)
 fliter(ccf_list, ReadPage())
 count = 0
 max = 1000
+result = []
 while nextPage() and count < max:
     waitPage(60)
-    fliter(ccf_list, ReadPage())
+    result.append(fliter(ccf_list, ReadPage()))
     count += 1
     print('Time: ', timeit.default_timer() - start)  
+print(result)
