@@ -1,3 +1,12 @@
+
+
+def pTime(start):
+    seconds = timeit.default_timer() - start
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    print ('Time:' , "%02d:%02d:%02d" % (h, m, s))
+
+
 import time
 import timeit
 import os
@@ -8,39 +17,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-import sqlite3
-class CCF：
-    db = 'E:/GraduationProject/db/ccf/ccf.db'
-    
-    def __init__(self):
-        print('此处理应有创建类，但代码还未合并，不需要实例化，调用静态方法即可')
-    
-    def get_ccf_list():
-        try:
-            conn = sqlite3.connect(db)
-            cursor = conn.cursor()
-            print ("连接数据库成功：", db)
-        except Exception as e:
-            print("连接数据库失败:", db ,e)
-        try:
-            ccf_list = cursor.execute('select fullname,shortname from ccf;').fetchall()
-            print('select fullname,shortname from ccf：', len(ccf_list))
-        except Exception as e:
-            print( '查询数据失败:',e)
-        cursor.close()
-        conn.close()  
-        return ccf_list
-
-
-
-test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer&highlight=true&returnType=SEARCH&matchPubs=true&pageNumber=130&returnFacets=ALL'
 class IEEE:
     'ieee搜索引擎相关'
     url = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText='
-    ccf_list = CCF().get_ccf_list()
+    ccf_list = []
+    result = None
+    driver = None
     
     def __init__(self, url, ccf_list):
         self.url = url
+        self.ccf_list = ccf_list
         print('搜索网址为：', self.url)
     
     def brower_init(self, isheadless = False):
@@ -88,7 +74,7 @@ class IEEE:
             return infoList;                                                                                                                               \
         }\
         return getInfoList();"
-        return driver.execute_script(showInfo_script)
+        return self.driver.execute_script(showInfo_script)
 
     def getShortName(self, str):
         shortname = re.findall(r'[(](.*)[)]', str)
@@ -100,7 +86,7 @@ class IEEE:
             flag = False
             if 'publication_title' in datalist[i]:
                 for y in self.ccf_list:
-                    shortname = getShortName(datalist[i]["publication_title"])
+                    shortname = self.getShortName(datalist[i]["publication_title"])
                     if datalist[i]["publication_title"].find(y[0]) != -1 or (shortname and y[1] and shortname == y[1]):
                         print(i,"success")
                         print([datalist[i]["publication_title"],shortname], '匹配' , y)
@@ -119,10 +105,10 @@ class IEEE:
 
     def nextPage(self):
         try:
-            next_btn = driver.find_element_by_css_selector('.next-btn')
-            print('页码：', driver.find_element_by_css_selector('a.active').text)
+            next_btn = self.driver.find_element_by_css_selector('.next-btn')
+            print('页码：', self.driver.find_element_by_css_selector('a.active').text)
             # next_btn.click()
-            driver.execute_script("document.getElementsByClassName('next-btn')[0].getElementsByTagName('a')[0].click()")
+            self.driver.execute_script("document.getElementsByClassName('next-btn')[0].getElementsByTagName('a')[0].click()")
             return True
         except Exception as e:
             print('已经到达最后一页（即找不到下一页的按钮了）：', e)
@@ -131,31 +117,62 @@ class IEEE:
     def waitPage(self, delay):
         print('正在等待页面渲染成功...')
         try:
-            WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results")))
+            WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results")))
             print('List-results已加载')
         except Exception as e:
             print("获取论文列表超时", e)
 
         try:
-            WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results-items")))
+            WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results-items")))
             print('List-results-items已加载')
         except Exception as e:
             try :
                 print('List-results-items未加载')
-                WebDriverWait(driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results-message")))
-                results-message = driver.execute_script('document.getElementsByClassName('List-results-message')[0].innerText;')
-                print("查询列表为空，页面提示信息为：", results-message, '可能是网络问题，请重试或者检查url是否正确')
+                WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CLASS_NAME, "List-results-message")))
+                results_message = self.driver.execute_script("document.getElementsByClassName('List-results-message')[0].innerText;")
+                print("查询列表为空，页面提示信息为：", results_message, '可能是网络问题，请重试或者检查url是否正确')
             except Exception as e:
                 print("获取论文列表条目超时", e)
 
     def ReadPage(self):
-        datalist = getInfo()
+        datalist = self.getInfo()
         print('本页条目数：' ,len(datalist))
         return datalist  
-
-    def pTime(self, start):
-        seconds = timeit.default_timer() - start
-        m, s = divmod(seconds, 60)
-        h, m = divmod(m, 60)
-        print ('Time:' , "%02d:%02d:%02d" % (h, m, s))
     
+    def run(self, max = -1):
+        #max为设置检索下限，检索成功的论文数不小于max
+        print('开始检索文章：url：',self.url)
+        start = timeit.default_timer()
+        pTime(start)
+        self.driver = webdriver.Chrome(options=self.brower_init())
+        self.driver.get(self.url)
+        self.waitPage(60)
+        self.fliter(self.ReadPage())
+        self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
+        while self.nextPage() and (max == -1 or (max != -1 and len(self.result) < max)):
+            self.waitPage(20)
+            for row in self.fliter(self.ReadPage()):
+                self.result = self.result.append(row, ignore_index=True) 
+            pTime(start)
+        print('检索结束，成功检索文章数：',len(self.result))
+        self.driver.quit()
+    
+    def exportCSV(self, filename = './ieee导出结果.csv'):
+        print('开始导出csv文件：',filename)
+        self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
+        print('导出csv文件成功：',filename)
+    
+    
+    def test_exportCSV(self, save_directory = '.'):
+        now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+        filename = save_directory + '/'+ now + '.csv'
+        self.exportCSV(filename)
+        
+        
+if __name__ == '__main__':
+    save_directory = "E:/GraduationProject/result"
+    test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer&highlight=true&returnType=SEARCH&matchPubs=true&pageNumber=130&returnFacets=ALL'
+
+    ieee = IEEE(test, ccf_list)
+    ieee.run()
+    ieee.test_exportCSV(save_directory)
