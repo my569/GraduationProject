@@ -1,5 +1,3 @@
-
-
 def pTime(start):
     seconds = timeit.default_timer() - start
     m, s = divmod(seconds, 60)
@@ -80,6 +78,12 @@ class IEEE:
         shortname = re.findall(r'[(](.*)[)]', str)
         return shortname[0] if shortname else ''
 
+    def check(self, longname, shortname, ccf_longname, ccf_shortname):
+        if shortname:
+            return shortname == ccf_shortname
+        else:
+            return (longname.find(ccf_longname) != -1)
+
     def fliter(self, datalist):
         res_list = []
         for i in range(len(datalist)):
@@ -87,7 +91,7 @@ class IEEE:
             if 'publication_title' in datalist[i]:
                 for y in self.ccf_list:
                     shortname = self.getShortName(datalist[i]["publication_title"])
-                    if datalist[i]["publication_title"].find(y[0]) != -1 or (shortname and y[1] and shortname == y[1]):
+                    if self.check(datalist[i]["publication_title"], shortname, y[0], y[1]):
                         print(i,"success")
                         print([datalist[i]["publication_title"],shortname], '匹配' , y)
                         datalist[i]['match_longname'] = y[0] if y[0] else ''
