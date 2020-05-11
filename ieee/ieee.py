@@ -80,9 +80,9 @@ class IEEE:
 
     def check(self, longname, shortname, ccf_longname, ccf_shortname):
         if shortname:
-            return shortname == ccf_shortname
+            return shortname == ccf_shortname #简称相同
         else:
-            return (longname.find(ccf_longname) != -1)
+            return (longname.find(ccf_longname) != -1) 
 
     def fliter(self, datalist):
         res_list = []
@@ -109,8 +109,8 @@ class IEEE:
 
     def nextPage(self):
         try:
-            next_btn = self.driver.find_element_by_css_selector('.next-btn')
-            print('页码：', self.driver.find_element_by_css_selector('a.active').text)
+            WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "next-btn")))
+            print('页码：', self.driver.execute_script("return document.querySelector('a.active').innerText"))
             # next_btn.click()
             self.driver.execute_script("document.getElementsByClassName('next-btn')[0].getElementsByTagName('a')[0].click()")
             return True
