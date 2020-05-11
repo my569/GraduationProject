@@ -140,7 +140,8 @@ class ACM:
             WebDriverWait(self.driver, delay).until(js_element_has_element((By.CLASS_NAME, "pagination__btn--next")))
             next_url = self.driver.execute_script("return document.getElementsByClassName('pagination__btn--next')[0].href")
             #打开下一页
-            self.driver.get(next_url)
+            #self.driver.get(next_url)
+            self.driver.execute_script("window.location.href = '{}'".format(next_url))
             try:
                 #当前页码
                 WebDriverWait(self.driver, delay).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".pagination__list .active")))
@@ -202,8 +203,8 @@ class ACM:
         pTime(start)
         self.driver = webdriver.Chrome(options=self.brower_init())
         print('正在打开网页')
-        self.driver.get(self.url)
-        print('111')
+        self.driver.execute_script("window.location.href = '{}'".format(self.url))
+        # self.driver.get(self.url)
         self.waitPage(60)
         self.fliter(self.ReadPage())
         self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
