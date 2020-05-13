@@ -174,7 +174,7 @@ class ACM:
 
         if not res:
             print('无简称')
-            return True
+            return False
         else:
             short = res.group(1)
             for y in self.ccf_list:
