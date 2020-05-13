@@ -271,7 +271,7 @@ class ACM:
     def test_exportCSV(self, save_directory = '.'):
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         filename = save_directory + '/'+ now + '.csv'
-        self.exportCSV(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
+        self.exportCSV(filename)
         
     def test(self):
         print('开始检索文章：url：',self.url)
