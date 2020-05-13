@@ -27,16 +27,12 @@ class js_element_has_element(object):
         if self.locator == By.CLASS_NAME:
             return driver.execute_script("return document.getElementsByClassName('{}')[0] != undefined".format(self.element)) and driver.execute_script("return document.getElementsByClassName('{}')[0] != null".format(self.element))
         elif self.locator == By.CSS_SELECTOR :
-            #return driver.execute_script("return document.querySelector('{}') != null".format(self.element))
             return driver.execute_script("return document.querySelector('{}') != undefined".format(self.element)) and driver.execute_script("return document.querySelector('{}') != null".format(self.element))
         elif self.locator == By.ID:
-            #return driver.execute_script("return document.getElementById('{}')[0] != null".format(self.element))
             return driver.execute_script("return document.getElementById('{}')[0] != undefined".format(self.element)) and driver.execute_script("return document.getElementById('{}')[0] != null".format(self.element))
         elif self.locator == By.TAG_NAME:
-            #return driver.execute_script("return document.getElementsByTagName('{}')[0] != null".format(self.element))
             return driver.execute_script("return document.getElementsByTagName('{}')[0] != undefined".format(self.element)) and driver.execute_script("return document.getElementsByTagName('{}')[0] != null".format(self.element))
         elif self.locator == 'js': #自行传入js脚本
-            #return driver.execute_script("return {} != null".format(self.element))
             return driver.execute_script("return {} != undefined".format(self.element)) and driver.execute_script("return document.getElementsByTagName('{}')[0] != null".format(self.element))
         else :
             print('js中不存在该类型的定位器', self.locator)
@@ -48,6 +44,7 @@ class ACM:
     ccf_list = []
     result = None
     driver = None
+    ordinal = ['', '1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th','17th','18th','19th','20th','21st','22nd','23rd','24th']
     
     def __init__(self, url, ccf_list):
         self.url = url
@@ -103,33 +100,82 @@ class ACM:
         return getInfoList();"
         return self.driver.execute_script(showInfo_script)
 
-    def check(self, longname, ccf_shortname, ccf_longname):
-        return longname == ccf_longname
+    def matchSingleShortName(self, short, ccf_short):
+        return short.strip().upper() == ccf_short.strip().upper()
+
+    def hasShortName(self, publication_title):
+        return ':' in publication_title
+    
+    def matchShortName(self, publication_title):
+        regex = "([A-Za-z]+)(.*:)"
+        pattern = re.compile(regex)
+        res = pattern.match(publication_title)#match是从字符串最左端开始匹配，group(0)规定了是整个匹配结果，group(1)才是第一组 
+
+        if not res:
+            print('无简称')
+            return True
+        else:
+            short = res.group(1)
+            for y in self.ccf_list:
+                ccf_short = y[1]
+                if not ccf_short:
+                    continue
+                if self.matchSingleShortName(short, ccf_short):
+                    print('有简称且匹配成功:', [short, ccf_short])
+                    self.match_ccf = y
+                    return True
+            print('有简称但匹配失败', [short])
+            return False
+
+    def matchSingleLongName(self, long, ccf_long):
+        ccf_long_after = re.sub("^[A-Za-z]* ", '', ccf_long, count=1).strip().upper()
+        long = long.strip().upper()
+        return long == ccf_long or long == ccf_long_after
+
+    def matchLongName(self, publication_title):
+        long = publication_title
+        for th in self.ordinal[1:]:
+            regex = "{}(.*)".format(th) #匹配序数词之后的  如'Proceedings of the 8th international'，匹配结果为' international'
+            pattern = re.compile(regex)
+            res = pattern.search(publication_title)
+            if res:
+                long = res.group(1).strip().upper()
+                break
+
+        for y in self.ccf_list:
+            ccf_long = y[0]
+            if self.matchSingleLongName(long, ccf_long):
+                print('全称匹配成功:', [publication_title,ccf_long])
+                self.match_ccf = y
+                return True
+        print('匹配失败',publication_title)
+        return False
+    
+    
+    def check(self, publication_title):
+        if self.hasShortName(publication_title):
+            return self.matchShortName(publication_title)
+        elif self.matchLongName(publication_title):
+            return True
+        else:
+            return False
 
     def fliter(self, pageList):
+        print('ccf_list：', len(ccf_list))
         res_list = []
         for i in range(len(pageList)):
-            isMatch = False
             if 'publication_title' in pageList[i]:
-                for y in self.ccf_list:
-                    if self.check(pageList[i]["publication_title"], y[0], y[1]):
-                        # 打印信息
-                        print(i,"success")
-                        print(pageList[i]["publication_title"], '匹配' , y)
-                        # 填充信息
-                        pageList[i]['match_longname'] = y[0] if y[0] else ''
-                        pageList[i]['match_shortname'] = y[1] if y[1] else ''
-                        # 添加进结果
-                        res_list.append(pageList[i])
-                        # 跳出循环
-                        isMatch = True
-                        break
-                if not isMatch:
-                    print(i,"fail")
-                    print(pageList[i]["publication_title"], '匹配失败')
+                if self.check(pageList[i]["publication_title"]):
+                    print(i,"success\n")
+                    pageList[i]['match_longname'] = self.match_ccf[0] if self.match_ccf[0] else ''
+                    pageList[i]['match_shortname'] = self.match_ccf[1] if self.match_ccf[1] else ''
+                    res_list.append(pageList[i])
+                else:
+                    print(i,"fail\n")
+                    #print(pageList[i]["publication_title"], '匹配失败')
             else:
-                print(i,"fail")
                 print('该文章没有提供相应的出版物标题')
+                print(i,"fail\n")
         return res_list
 
     def nextPage(self, delay):
@@ -225,7 +271,7 @@ class ACM:
     def test_exportCSV(self, save_directory = '.'):
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         filename = save_directory + '/'+ now + '.csv'
-        self.exportCSV(filename)
+        self.exportCSV(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
         
     def test(self):
         print('开始检索文章：url：',self.url)
