@@ -21,6 +21,8 @@ class IEEE:
     ccf_list = []
     result = None
     driver = None
+    ordinal = ['', '1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th','17th','18th','19th','20th','21st','22nd','23rd','24th']
+    
     
     def __init__(self, url, ccf_list):
         self.url = url
@@ -73,37 +75,85 @@ class IEEE:
         return getInfoList();"
         return self.driver.execute_script(showInfo_script)
 
-    def getShortName(self, str):
-        shortname = re.findall(r'[(](.*)[)]', str)
-        return shortname[0] if shortname else ''
+    def matchSingleShortName(self, short, ccf_short):
+        return short.strip().upper() == ccf_short.strip().upper()
 
-    def check(self, longname, shortname, ccf_longname, ccf_shortname):
-        if shortname:
-            return shortname == ccf_shortname #简称相同
+    def hasShortName(self, publication_title):
+        return '(' in publication_title
+
+    def matchShortName(self, publication_title):
+        regex = r'[(](.*)[)]'
+        pattern = re.compile(regex)
+        res = pattern.search(publication_title)#注意是'search'，与acm的不同，group(1)才是第一组 
+
+        if not res:
+            print('无简称')
+            return False
         else:
-            return (longname.find(ccf_longname) != -1) 
+            short = res.group(1)
+            for y in self.ccf_list:
+                ccf_short = y[1]
+                if not ccf_short:
+                    continue
+                if self.matchSingleShortName(short, ccf_short):
+                    print('有简称且匹配成功:', [short, ccf_short])
+                    self.match_ccf = y
+                    return True
+            print('有简称但匹配失败', [short])
+            return False
 
-    def fliter(self, datalist):
+    def matchSingleLongName(self, long, ccf_long):
+        ccf_long_after = re.sub("^[A-Za-z]* ", '', ccf_long, count=1).strip().upper()
+        long = long.strip().upper()
+        return long == ccf_long or long == ccf_long_after
+
+    def matchLongName(self, publication_title):
+        long = publication_title
+        # 去掉年份
+        long = re.sub("^[0-9]+ ", '', long, count=1)# 注意年份后有空格
+        # 取序数词之后的  如'Proceedings of the 8th international...'，取' international...'
+        for th in self.ordinal[1:]:
+            regex = "{}(.*)".format(th) 
+            pattern = re.compile(regex)
+            res = pattern.search(publication_title)
+            if res:
+                long = res.group(1).strip().upper()
+                break
+
+        for y in self.ccf_list:
+            ccf_long = y[0]
+            if self.matchSingleLongName(long, ccf_long):
+                print('全称匹配成功:', [publication_title,ccf_long])
+                self.match_ccf = y
+                return True
+        print('匹配失败',publication_title)
+        return False
+
+
+    def check(self, publication_title):
+        if self.hasShortName(publication_title):
+            return self.matchShortName(publication_title)
+        elif self.matchLongName(publication_title):
+            return True
+        else:
+            return False 
+        
+    def fliter(self, pageList):
+        print('ccf_list：', len(self.ccf_list))
         res_list = []
-        for i in range(len(datalist)):
-            flag = False
-            if 'publication_title' in datalist[i]:
-                for y in self.ccf_list:
-                    shortname = self.getShortName(datalist[i]["publication_title"])
-                    if self.check(datalist[i]["publication_title"], shortname, y[0], y[1]):
-                        print([datalist[i]["publication_title"],shortname], '匹配' , y)
-                        print(i,"success\n")
-                        datalist[i]['match_longname'] = y[0] if y[0] else ''
-                        datalist[i]['match_shortname'] = y[1] if y[1] else ''
-                        res_list.append(datalist[i])
-                        flag = True
-                        break
-                if not flag:
-                    print([datalist[i]["publication_title"],shortname], '匹配失败')
+        for i in range(len(pageList)):
+            if 'publication_title' in pageList[i]:
+                if self.check(pageList[i]["publication_title"]):
+                    print(i,"success\n")
+                    pageList[i]['match_longname'] = self.match_ccf[0] if self.match_ccf[0] else ''
+                    pageList[i]['match_shortname'] = self.match_ccf[1] if self.match_ccf[1] else ''
+                    res_list.append(pageList[i])
+                else:
                     print(i,"fail\n")
+                    #print(pageList[i]["publication_title"], '匹配失败')
             else:
-                print(i,"fail")
                 print('该文章没有提供相应的出版物标题')
+                print(i,"fail\n")
         return res_list
 
     def nextPage(self):
@@ -158,6 +208,7 @@ class IEEE:
             for row in self.fliter(self.ReadPage()):
                 self.result = self.result.append(row, ignore_index=True) 
             pTime(start)
+            print('已经成功检索文章：',len(self.result))
         print('检索结束，成功检索文章数：',len(self.result))
         self.driver.quit()
     
