@@ -35,7 +35,6 @@ class IEEE:
             print('请检查是否安装chrome的webdriver', e)
         if isheadless:
             chrome_options.add_argument('--headless')  # 增加无界面选项
-        chrome_options.add_argument('--disable-gpu')  # 如果不加这个选项，有时定位会出现问题
         return chrome_options
 
     def getInfo(self):
@@ -92,16 +91,16 @@ class IEEE:
                 for y in self.ccf_list:
                     shortname = self.getShortName(datalist[i]["publication_title"])
                     if self.check(datalist[i]["publication_title"], shortname, y[0], y[1]):
-                        print(i,"success")
                         print([datalist[i]["publication_title"],shortname], '匹配' , y)
+                        print(i,"success\n")
                         datalist[i]['match_longname'] = y[0] if y[0] else ''
                         datalist[i]['match_shortname'] = y[1] if y[1] else ''
                         res_list.append(datalist[i])
                         flag = True
                         break
                 if not flag:
-                    print(i,"fail")
                     print([datalist[i]["publication_title"],shortname], '匹配失败')
+                    print(i,"fail\n")
             else:
                 print(i,"fail")
                 print('该文章没有提供相应的出版物标题')
@@ -149,7 +148,8 @@ class IEEE:
         start = timeit.default_timer()
         pTime(start)
         self.driver = webdriver.Chrome(options=self.brower_init())
-        self.driver.get(self.url)
+        #self.driver.get(self.url)
+        self.driver.execute_script("window.location.href = '{}'".format(self.url))
         self.waitPage(60)
         self.fliter(self.ReadPage())
         self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
@@ -161,22 +161,14 @@ class IEEE:
         print('检索结束，成功检索文章数：',len(self.result))
         self.driver.quit()
     
-    def exportCSV(self, filename = './ieee导出结果.csv'):
+    def exportCSV_byFilename(self, filename = './ieee导出结果.csv'):
         print('开始导出csv文件：',filename)
         self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
         print('导出csv文件成功：',filename)
     
     
-    def test_exportCSV(self, save_directory = '.'):
+    def exportCSV_byFilefolder(self, directory = '.'):
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
-        filename = save_directory + '/'+ now + '.csv'
-        self.exportCSV(filename)
+        filename = directory + '/'+ now + '.csv'
+        self.exportCSV_byFilename(filename)
         
-        
-if __name__ == '__main__':
-    save_directory = "E:/GraduationProject/result"
-    test = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText=computer&highlight=true&returnType=SEARCH&matchPubs=true&pageNumber=130&returnFacets=ALL'
-
-    ieee = IEEE(test, ccf_list)
-    ieee.run()
-    ieee.test_exportCSV(save_directory)

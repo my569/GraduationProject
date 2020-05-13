@@ -24,4 +24,3 @@ CREATE TABLE ACM(
 	parent_publication_title_id  CHAR,
 	primary key(publication_title)
 );
-parent_publication_title_id
