@@ -14,7 +14,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC    
 
-
 class js_element_has_element(object):
     """
     利用js代码来检查元素是否存在
@@ -40,25 +39,48 @@ class js_element_has_element(object):
 
 class ACM:
     'ieee搜索引擎相关'
-    url = 'https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText='
+    acm_web = 'https://dl.acm.org'
+    url = None
+    cookies = ''
     ccf_list = []
-    result = None
     driver = None
     ordinal = ['', '1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th','17th','18th','19th','20th','21st','22nd','23rd','24th']
+    num = -1
+    delay = 20
+    headless = False
+    result = None
     
     def __init__(self, url, ccf_list):
         self.url = url
         self.ccf_list = ccf_list
         print('搜索网址为：', self.url)
-    
-    def brower_init(self, isheadless = False):
+        print('ccf_list：', len(self.ccf_list))
+        
+    def cookie_to_dic(cookies):
+        return {item.split('=')[0]: item.split('=')[1] for item in cookies.split('; ')}
+        
+    def setCookie(cookies):
+        self.cookies = cookie_to_dic(cookies)
+        
+    def setNum(num):
+        self.num = num
+        
+    def setHeadless(delay):
+        self.delay = delay
+        
+    def brower_init(self):
         print("正在初始化浏览器")
+        # 检查是否安装好chrome的webdriver
         try :
             chrome_options = webdriver.ChromeOptions()
         except exception as e:
             print('请检查是否安装chrome的webdriver', e)
-        if isheadless:
-            chrome_options.add_argument('--headless')  # 增加无界面选项
+            
+        # 无头浏览器
+        if self.headless:
+            chrome_options.add_argument('--headless')
+        # 忽略https证书问题    
+        chrome_options.add_argument('--ignore-certificate-errors')
         return chrome_options
 
     def getInfo(self):
@@ -239,20 +261,25 @@ class ACM:
         return res_list
 
     
-    def run(self, max = -1):
-        #max为设置检索下限，检索成功的论文数不小于max
+    def run(self):
         print('开始检索文章：url：',self.url)
         start = timeit.default_timer()
         pTime(start)
         self.driver = webdriver.Chrome(options=self.brower_init())
-        print('正在打开网页')
+        print('正在打开网站首页')
+        self.driver.execute_script("window.location.href = '{}'".format(self.acm_web))
+        print('正在添加cookie')
+        for cookie in self.cookies:
+            self.driver.add_cookie(cookie)
+        print('正在进入用户提供的搜索页')
         self.driver.execute_script("window.location.href = '{}'".format(self.url))
-        # self.driver.get(self.url)
-        self.waitPage(60)
+        # 等待页面加载
+        self.waitPage(self.delay)
         self.fliter(self.ReadPage())
+        # 初始化result
         self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
-        while self.nextPage(20) and (max == -1 or (max != -1 and len(self.result) < max)):
-            self.waitPage(20)
+        while self.nextPage(self.delay) and (self.num == -1 or (self.num != -1 and len(self.result) < self.num)):
+            self.waitPage(self.delay)
             for row in self.fliter(self.ReadPage()):
                 self.result = self.result.append(row, ignore_index=True)
             pTime(start)
@@ -270,12 +297,5 @@ class ACM:
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         filename = directory + '/'+ now + '.csv'
         self.exportCSV_byFilename(filename)
-        
-    def test(self):
-        print('开始检索文章：url：',self.url)
-        start = timeit.default_timer()
-        pTime(start)
-        self.driver = webdriver.Chrome(options=self.brower_init())
-        self.driver.get(self.url)
         
         

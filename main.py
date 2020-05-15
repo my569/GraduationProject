@@ -10,6 +10,7 @@ ccf = CCF()
 ccf_list = ccf.run()
 
 op = 0
+op = int(input('0:ieee，1:acm\n'))
 if op == 0:
     # 读取文件中的url
     with open('url.txt', 'r') as f:

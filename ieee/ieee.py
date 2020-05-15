@@ -31,12 +31,16 @@ class IEEE:
     
     def brower_init(self, isheadless = False):
         print("正在初始化浏览器")
+        # 检查是否安装好chrome的webdriver
         try :
             chrome_options = webdriver.ChromeOptions()
         except exception as e:
             print('请检查是否安装chrome的webdriver', e)
+        # 无头浏览器
         if isheadless:
-            chrome_options.add_argument('--headless')  # 增加无界面选项
+            chrome_options.add_argument('--headless')
+        # 忽略https证书问题    
+        chrome_options.add_argument('--ignore-certificate-errors')
         return chrome_options
 
     def getInfo(self):
