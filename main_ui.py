@@ -53,6 +53,7 @@ class Window(QMainWindow):
         self.initUI()
         # Custom output stream.
         sys.stdout = EmittingStream(newText=self.onUpdateText)
+        sys.stderr = EmittingStream(newText=self.onUpdateText)
 
     def onUpdateText(self, text):
         """Write console output to text widget."""
