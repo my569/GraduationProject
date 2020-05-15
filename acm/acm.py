@@ -40,14 +40,16 @@ class js_element_has_element(object):
 class ACM:
     'ieee搜索引擎相关'
     acm_web = 'https://dl.acm.org'
-    url = None
-    cookies = ''
-    ccf_list = []
     driver = None
     ordinal = ['', '1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th','17th','18th','19th','20th','21st','22nd','23rd','24th']
+    #输入属性
+    ccf_list = []
     num = -1
+    url = None
+    cookies = ''
     delay = 20
     headless = False
+    #输出属性
     result = None
     
     def __init__(self, url, ccf_list):
@@ -56,18 +58,30 @@ class ACM:
         print('搜索网址为：', self.url)
         print('ccf_list：', len(self.ccf_list))
         
-    def cookie_to_dic(cookies):
-        return {item.split('=')[0]: item.split('=')[1] for item in cookies.split('; ')}
+    # 属性封装
+    def extract_cookies(self, cookies):
+        """从浏览器或者request headers中拿到cookie字符串，提取为字典格式的cookies，再转成list"""
+        cookies_dict = dict([l.split("=", 1) for l in cookies.split("; ")])
+        cookies_list = []
+        for (x,y) in cookies_dict.items():
+            cookies_list.append({'name':x,'value':y})
+        return cookies_list
         
-    def setCookie(cookies):
-        self.cookies = cookie_to_dic(cookies)
+
+    def setCookie(self, cookies):
+        self.cookies = self.extract_cookies(cookies)
         
-    def setNum(num):
+    def setNum(self, num):
         self.num = num
         
-    def setHeadless(delay):
+    def setDelay(self, delay):
         self.delay = delay
         
+    def setHeadless(self, headless):
+        self.headless = headless
+        
+        
+    # 浏览器
     def brower_init(self):
         print("正在初始化浏览器")
         # 检查是否安装好chrome的webdriver
@@ -75,10 +89,13 @@ class ACM:
             chrome_options = webdriver.ChromeOptions()
         except exception as e:
             print('请检查是否安装chrome的webdriver', e)
-            
+        chrome_options.add_argument('--disable-gpu')
         # 无头浏览器
         if self.headless:
+            #chrome_options.set_headless()
             chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--remote-debugging-port=9222')
+            
         # 忽略https证书问题    
         chrome_options.add_argument('--ignore-certificate-errors')
         return chrome_options
@@ -183,6 +200,7 @@ class ACM:
         print('本页条目数：' ,len(pageList))
         return pageList
     
+    # 文章过滤
     def matchSingleShortName(self, short, ccf_short):
         return short.strip().upper() == ccf_short.strip().upper()
 
@@ -265,37 +283,47 @@ class ACM:
         print('开始检索文章：url：',self.url)
         start = timeit.default_timer()
         pTime(start)
+        # 初始化result
+        self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
+
         self.driver = webdriver.Chrome(options=self.brower_init())
         print('正在打开网站首页')
-        self.driver.execute_script("window.location.href = '{}'".format(self.acm_web))
-        print('正在添加cookie')
-        for cookie in self.cookies:
-            self.driver.add_cookie(cookie)
+        #self.driver.execute_script("window.location.href = '{}'".format(self.acm_web))
+        if self.cookies :
+            print('正在添加cookie:')
+            for cookie in self.cookies:
+                print(cookie)
+                self.driver.add_cookie(cookie)
         print('正在进入用户提供的搜索页')
         self.driver.execute_script("window.location.href = '{}'".format(self.url))
         # 等待页面加载
         self.waitPage(self.delay)
-        self.fliter(self.ReadPage())
-        # 初始化result
-        self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
-        while self.nextPage(self.delay) and (self.num == -1 or (self.num != -1 and len(self.result) < self.num)):
-            self.waitPage(self.delay)
-            for row in self.fliter(self.ReadPage()):
-                self.result = self.result.append(row, ignore_index=True)
-            pTime(start)
-            print('已经成功检索文章：',len(self.result))
+        for row in self.fliter(self.ReadPage()):
+            self.result = self.result.append(row, ignore_index=True)
+        print('已经成功检索文章：',len(self.result))
+        if not (self.num != -1 and self.num <= len(self.result)):
+            while self.nextPage(self.delay):
+                if self.num != -1 and self.num <= len(self.result):
+                    break
+                self.waitPage(self.delay)
+                for row in self.fliter(self.ReadPage()):
+                    self.result = self.result.append(row, ignore_index=True)
+                pTime(start)
+                print('已经成功检索文章：',len(self.result))
         print('检索结束，成功检索文章数：',len(self.result))
         self.driver.quit()
     
     def exportCSV_byFilename(self, filename = './ccf导出结果.csv'):
         print('开始导出csv文件：',filename)
-        self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
+        self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'], index=0)
         print('导出csv文件成功：',filename)
+        return filename
     
     
     def exportCSV_byFilefolder(self, directory = '.'):
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         filename = directory + '/'+ now + '.csv'
         self.exportCSV_byFilename(filename)
+        return filename
         
         

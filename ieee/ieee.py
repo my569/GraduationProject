@@ -220,10 +220,12 @@ class IEEE:
         print('开始导出csv文件：',filename)
         self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'])
         print('导出csv文件成功：',filename)
+        return filename
     
     
     def exportCSV_byFilefolder(self, directory = '.'):
         now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         filename = directory + '/'+ now + '.csv'
         self.exportCSV_byFilename(filename)
+        return filename
         
