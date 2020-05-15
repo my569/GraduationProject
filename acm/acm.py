@@ -38,7 +38,7 @@ class js_element_has_element(object):
             return False
 
 class ACM:
-    'ieee搜索引擎相关'
+    'acm搜索引擎相关'
     acm_web = 'https://dl.acm.org'
     driver = None
     ordinal = ['', '1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th','17th','18th','19th','20th','21st','22nd','23rd','24th']
@@ -95,7 +95,6 @@ class ACM:
             #chrome_options.set_headless()
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--remote-debugging-port=9222')
-            
         # 忽略https证书问题    
         chrome_options.add_argument('--ignore-certificate-errors')
         return chrome_options

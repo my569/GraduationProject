@@ -197,6 +197,8 @@ class Window(QMainWindow):
         main_layout = QVBoxLayout()
         # 当前url
         self.nowUrlLabel = QLabel()
+        self.nowUrlLabel.setWordWrap(True)
+        self.nowUrlLabel.setAlignment(Qt.AlignTop)
         main_layout.addWidget(self.nowUrlLabel)
         
         pushButton_cls = QPushButton()
