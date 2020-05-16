@@ -298,6 +298,7 @@ class Window(QMainWindow):
         
         # 切换到输出结果页面
         self.right_widget.setCurrentIndex(2)
+        self.tableTitle.setText('检索结果：' + self.result_filename)
         self.showResult(self.result_filename)
         
         print("线程结束", self.thread)

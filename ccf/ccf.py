@@ -36,8 +36,10 @@ class CCF:
         except Exception as e:
             print("连接数据库失败:", self.db_file ,e)
         try:
-            self.ccf_list = cursor.execute('select fullname,shortname from ccf;').fetchall()
-            print('select fullname,shortname from ccf：', len(self.ccf_list))
+            self.ccf_list = cursor.execute('select fullname,shortname,rank from ccf;').fetchall()
+            for i in range(len(self.ccf_list)):
+                self.ccf_list[i] = tuple(list((self.ccf_list[i][0], self.ccf_list[i][1], self.ranks[self.ccf_list[i][2]]))) #将tuple强制转为list，再转回tuple
+            print('select fullname,shortname,rank from ccf：', len(self.ccf_list))
         except Exception as e:
             print( '查询数据失败:',e)
         cursor.close()

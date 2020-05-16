@@ -221,6 +221,7 @@ class IEEE:
                     print(i,"success\n")
                     pageList[i]['match_longname'] = self.match_ccf[0] if self.match_ccf[0] else ''
                     pageList[i]['match_shortname'] = self.match_ccf[1] if self.match_ccf[1] else ''
+                    pageList[i]['rank'] = self.match_ccf[2] if self.match_ccf[2] else ''
                     res_list.append(pageList[i])
                 else:
                     print(i,"fail\n")
@@ -237,7 +238,7 @@ class IEEE:
         start = timeit.default_timer()
         pTime(start)
         # 初始化result
-        self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname',"abstract"))
+        self.result = pandas.DataFrame(columns=("document_title","publication_title","url","authors","description","match_longname",'match_shortname','rank',"abstract"))
 
         self.driver = webdriver.Chrome(options=self.brower_init())
         print('正在打开网站首页')
@@ -268,7 +269,7 @@ class IEEE:
     
     def exportCSV_byFilename(self, filename = './ieee导出结果.csv'):
         print('开始导出csv文件：',filename)
-        self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname'], index=0)
+        self.result.to_csv(filename, columns=['document_title','publication_title','url','match_longname','match_shortname','rank'], index=0)
         print('导出csv文件成功：',filename)
         return filename
     
